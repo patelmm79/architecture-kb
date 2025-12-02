@@ -1,0 +1,41 @@
+name: Pattern Discovery Agent
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  analyze-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full history for better analysis
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install anthropic requests pygithub gitpython
+      
+      - name: Run Pattern Analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # or Slack
+          KNOWLEDGE_BASE_REPO: ${{ secrets.KNOWLEDGE_BASE_REPO }}  # e.g., "yourusername/architecture-kb"
+        run: |
+          python .github/scripts/pattern_analyzer.py
+      
+      - name: Upload analysis results
+        uses: actions/upload-artifact@v3
+        with:
+          name: pattern-analysis
+          path: pattern_analysis.json
+          retention-days: 90
