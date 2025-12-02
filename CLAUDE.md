@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Pattern Discovery Agent System - an automated architectural consistency and pattern discovery tool that analyzes code commits across GitHub repositories using Claude AI. The system acts as institutional memory, detecting similar patterns, architectural drift, and opportunities for code reuse across multiple projects.
 
+**Key Feature**: This system uses GitHub Actions reusable workflows, so monitored projects only need a tiny 15-line workflow file - no copying of scripts or logic required.
+
 ## Core Architecture
 
 ### Three-Tier System
@@ -30,14 +32,24 @@ This is a Pattern Discovery Agent System - an automated architectural consistenc
 ### Data Flow
 
 ```
-Git Push → GitHub Action → Pattern Analyzer → Claude API → Extract Patterns
-                                           ↓
-                                    Knowledge Base Repo (JSON)
-                                           ↓
-                                    Find Similar Patterns
-                                           ↓
-                                    Webhook Notification
+Monitored Project (Push) → Calls Reusable Workflow → Pattern Analyzer → Claude API
+                                                            ↓
+                                                     Extract Patterns
+                                                            ↓
+                                                  Knowledge Base Repo (JSON)
+                                                            ↓
+                                                  Find Similar Patterns
+                                                            ↓
+                                                  Webhook Notification
 ```
+
+### Reusable Workflow Architecture
+
+The workflow in `.github/workflows/main.yml` is configured with `workflow_call` trigger, allowing other repositories to call it without copying code:
+
+1. **Monitored Project**: Contains only a small workflow file that calls this repository's workflow
+2. **This Repository**: Contains all the logic, scripts, and dependencies
+3. **Execution**: GitHub Actions checks out both repos and runs the analyzer on the monitored code
 
 ### Knowledge Base Structure
 
@@ -48,7 +60,7 @@ Stored as `knowledge_base.json` in a separate repository:
 
 ## Development Commands
 
-### Setup
+### Setup for Local Development
 
 ```bash
 # Install dependencies
@@ -59,7 +71,7 @@ venv\Scripts\activate  # Windows
 source venv/bin/activate  # Unix
 ```
 
-### Running Pattern Analysis
+### Running Pattern Analysis Locally
 
 ```bash
 # Requires environment variables:
@@ -70,6 +82,27 @@ source venv/bin/activate  # Unix
 
 python scripts/pattern_analyzer.py
 ```
+
+### Setting Up Monitoring for Other Projects
+
+See `SETUP_MONITORING.md` for complete instructions. Quick version:
+
+1. Add secrets to the target project (ANTHROPIC_API_KEY, etc.)
+2. Create `.github/workflows/pattern-monitoring.yml` in the target project:
+```yaml
+name: Pattern Monitoring
+on:
+  push:
+    branches: [main, master, develop]
+jobs:
+  analyze-patterns:
+    uses: patelmm79/architecture-kb/.github/workflows/main.yml@main
+    secrets:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      KNOWLEDGE_BASE_REPO: ${{ secrets.KNOWLEDGE_BASE_REPO }}
+```
+3. Commit and push - monitoring is now active!
 
 ### Pre-commit Hook Setup
 

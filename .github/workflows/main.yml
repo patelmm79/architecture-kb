@@ -1,6 +1,17 @@
 name: Pattern Discovery Agent
 
 on:
+  workflow_call:
+    secrets:
+      ANTHROPIC_API_KEY:
+        required: true
+        description: 'Anthropic API key from console.anthropic.com'
+      DISCORD_WEBHOOK_URL:
+        required: false
+        description: 'Discord/Slack webhook URL for notifications'
+      KNOWLEDGE_BASE_REPO:
+        required: false
+        description: 'Knowledge base repository (format: username/repo)'
   push:
     branches: [main, master, develop]
   pull_request:
@@ -10,31 +21,39 @@ jobs:
   analyze-patterns:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout monitored repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Get full history for better analysis
-      
+
+      - name: Checkout pattern analyzer
+        uses: actions/checkout@v4
+        with:
+          repository: patelmm79/architecture-kb
+          path: .pattern-discovery
+          sparse-checkout: |
+            scripts/pattern_analyzer.py
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
           pip install anthropic requests pygithub gitpython
-      
+
       - name: Run Pattern Analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # or Slack
-          KNOWLEDGE_BASE_REPO: ${{ secrets.KNOWLEDGE_BASE_REPO }}  # e.g., "yourusername/architecture-kb"
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          KNOWLEDGE_BASE_REPO: ${{ secrets.KNOWLEDGE_BASE_REPO }}
         run: |
-          python .github/scripts/pattern_analyzer.py
-      
+          python .pattern-discovery/scripts/pattern_analyzer.py
+
       - name: Upload analysis results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pattern-analysis
           path: pattern_analysis.json
