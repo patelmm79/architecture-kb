@@ -12,6 +12,9 @@ on:
       KNOWLEDGE_BASE_REPO:
         required: false
         description: 'Knowledge base repository (format: username/repo)'
+      ORCHESTRATOR_URL:
+        required: false
+        description: 'Orchestrator service URL for dependency triage'
   push:
     branches: [main, master, develop]
   pull_request:
@@ -49,6 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           KNOWLEDGE_BASE_REPO: ${{ secrets.KNOWLEDGE_BASE_REPO }}
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
         run: |
           python .pattern-discovery/scripts/pattern_analyzer.py
 

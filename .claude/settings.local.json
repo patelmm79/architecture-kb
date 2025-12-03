@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd CLAUDE.md documentation for AI assistants\n\nThis file provides comprehensive guidance for Claude Code when working with this repository, including:\n- Overview of the Pattern Discovery Agent System architecture\n- Development commands and setup instructions\n- Key implementation details for pattern extraction and similarity detection\n- Configuration options and customization guidelines\n- Important design patterns and error handling philosophy\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:blog.marcnuri.com)",
+      "WebFetch(domain:www.develeap.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(git commit:*)",
+      "Bash(iconv:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

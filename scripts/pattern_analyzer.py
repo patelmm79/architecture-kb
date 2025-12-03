@@ -24,11 +24,13 @@ class PatternAnalyzer:
         self.github_client = Github(self.github_token)
         self.webhook_url = os.environ.get('WEBHOOK_URL')
         self.kb_repo_name = os.environ.get('KNOWLEDGE_BASE_REPO')
+        self.orchestrator_url = os.environ.get('ORCHESTRATOR_URL')
         self.repo = git.Repo('.')
 
         # Get current repository info
         self.current_repo = os.environ.get('GITHUB_REPOSITORY')
         self.current_sha = os.environ.get('GITHUB_SHA', self.repo.head.commit.hexsha)
+        self.current_branch = os.environ.get('GITHUB_REF_NAME', 'main')
 
     def get_recent_changes(self) -> Dict:
         """Extract recent commit changes"""
@@ -296,6 +298,40 @@ Respond ONLY with valid JSON in this exact format:
         except Exception as e:
             print(f"Error sending notification: {e}")
 
+    def notify_orchestrator(self, changes: Dict, patterns: Dict):
+        """Notify orchestrator service of changes for dependency triage"""
+        if not self.orchestrator_url:
+            print("No orchestrator URL configured, skipping dependency notification")
+            return
+
+        try:
+            # Prepare change event payload
+            event_payload = {
+                "source_repo": self.current_repo,
+                "commit_sha": self.current_sha,
+                "commit_message": changes.get('commit_message', ''),
+                "branch": self.current_branch,
+                "changed_files": changes.get('files_changed', []),
+                "pattern_summary": patterns,
+                "timestamp": datetime.now().isoformat()
+            }
+
+            # Send to orchestrator
+            orchestrator_endpoint = f"{self.orchestrator_url}/api/webhook/change-notification"
+            response = requests.post(orchestrator_endpoint, json=event_payload, timeout=10)
+            response.raise_for_status()
+
+            result = response.json()
+            print(f"✓ Orchestrator notified successfully")
+            print(f"  Consumers scheduled: {result.get('consumers_scheduled', [])}")
+            print(f"  Derivatives scheduled: {result.get('derivatives_scheduled', [])}")
+
+        except requests.exceptions.Timeout:
+            print("⚠ Orchestrator notification timed out (continuing anyway)")
+        except Exception as e:
+            print(f"⚠ Error notifying orchestrator: {e}")
+            print("  (Continuing with normal flow)")
+
     def run(self):
         """Main execution flow"""
         print(f"Analyzing patterns for {self.current_repo}...")
@@ -332,7 +368,11 @@ Respond ONLY with valid JSON in this exact format:
         kb = self.load_knowledge_base()
         similarities = self.find_similar_patterns(patterns, kb)
 
-        # Step 5: Notify
+        # Step 5: Notify orchestrator about dependencies
+        print("Notifying orchestrator for dependency triage...")
+        self.notify_orchestrator(changes, patterns)
+
+        # Step 6: Notify about pattern similarities
         if similarities:
             message = f"🔍 **Pattern Analysis: {self.current_repo}**\n\n"
             message += f"Found {len(similarities)} similar repositories!\n\n"
